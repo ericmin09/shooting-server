@@ -1,0 +1,32 @@
+# 환경변수 (API 키 포함 - 절대 GitHub에 올리지 않음!)
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# 대용량 모델 파일 (서버가 자동 다운로드함)
+*.task
+
+# 업로드 파일
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# 로컬 전용 파일
+*.log
+fly.toml
+local_llm_replit.py
+REPLIT_DEPLOYMENT_GUIDE.md
+run_server.bat
+run_server.sh
+start_server.sh
+server.log
+test_cloudinary.py
+.replit
