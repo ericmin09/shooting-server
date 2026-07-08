@@ -136,9 +136,11 @@ async def upload_image(file: UploadFile = File(...)):
         def convert_numpy_types(obj):
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
-            elif isinstance(obj, (np.float32, np.float64)):
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, np.floating):
                 return float(obj)
-            elif isinstance(obj, (np.int32, np.int64)):
+            elif isinstance(obj, np.integer):
                 return int(obj)
             elif isinstance(obj, dict):
                 return {k: convert_numpy_types(v) for k, v in obj.items()}
@@ -289,7 +291,8 @@ async def upload_image(file: UploadFile = File(...)):
                     print(f"✓ 시각화 이미지 Cloudinary 업로드 완료: {visualization_url}")
                 except Exception as e:
                     print(f"⚠ Cloudinary 업로드 실패: {e}")
-                    visualization_url = None
+                    # Cloudinary 실패 시 서버 로컬 URL로 폴백
+                    visualization_url = f"/images/{vis_filename}"
             else:
                 print(f"⚠ 시각화 이미지 파일 없음: {vis_path}")
         else:
