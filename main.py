@@ -396,20 +396,10 @@ async def chat(request: ChatRequest):
         import traceback
         traceback.print_exc()
 
-        if "429" in error_str or "RateLimit" in type(e).__name__ or "요청이 너무 많습니다" in error_str:
-            return {
-                "status": "error",
-                "message": "요청이 너무 많습니다. 1~2분 후 다시 시도해주세요."
-            }
-        if "api_key" in error_str.lower() or "authentication" in error_str.lower() or "invalid" in error_str.lower():
-            return {
-                "status": "error",
-                "message": "서버 설정 오류입니다. 관리자에게 문의해주세요."
-            }
-        print(f"[Chat] 실제 오류 내용: {error_str}")
+        # 모든 에러를 그대로 반환 (디버깅용)
         return {
             "status": "error",
-            "message": f"오류: {error_str}"
+            "message": f"디버그 오류: {type(e).__name__}: {error_str[:300]}"
         }
 
 
