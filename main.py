@@ -197,6 +197,8 @@ async def upload_image(file: UploadFile = File(...)):
         shoulder = scores.get("shoulder_level", {})
         head = scores.get("head_position", {})
         alignment = scores.get("arm_wrist_alignment", {})
+        waist = scores.get("waist_angle", {})
+        lower_body = scores.get("lower_body", {})
         
         # 점수 합계 계산
         score_a = body_lean.get('score', 0)
@@ -204,8 +206,10 @@ async def upload_image(file: UploadFile = File(...)):
         score_c = shoulder.get('score', 0)
         score_d = head.get('score', 0)
         score_e = alignment.get('score', 0)
+        score_f = waist.get('score', 0)
+        score_g = lower_body.get('score', 0)
         
-        total_calculated = score_a + score_b + score_c + score_d + score_e
+        total_calculated = score_a + score_b + score_c + score_d + score_e + score_f + score_g
         
         # 점수 요약 문자열
         evaluation_details = []
@@ -229,7 +233,7 @@ async def upload_image(file: UploadFile = File(...)):
         evaluation_details.append("")
         
         # 점수 구성 (한 줄로 명확하게)
-        evaluation_details.append(f"점수 계산: {score_a}+{score_b}+{score_c}+{score_d}+{score_e} = {total_calculated}점")
+        evaluation_details.append(f"점수 계산: {score_a}+{score_b}+{score_c}+{score_d}+{score_e}+{score_f}+{score_g} = {total_calculated}점 (100점 환산)")
         evaluation_details.append("")
         evaluation_details.append("【 세부 평가 항목 】")
         evaluation_details.append("")
@@ -257,6 +261,20 @@ async def upload_image(file: UploadFile = File(...)):
         # E. 팔/손 정렬
         evaluation_details.append(f"[E] 팔/손 정렬 {score_e}/25점")
         evaluation_details.append(f"    → {alignment.get('eval', 'N/A')}")
+        evaluation_details.append("")
+        
+        # F. 허리 각도
+        evaluation_details.append(f"[F] 허리 각도 {score_f}/10점")
+        evaluation_details.append(f"    → {waist.get('eval', 'N/A')}")
+        if waist.get('angle', 0):
+            evaluation_details.append(f"    (각도: {waist.get('angle')}°)")
+        evaluation_details.append("")
+        
+        # G. 하체 자세
+        evaluation_details.append(f"[G] 하체 자세 {score_g}/10점")
+        evaluation_details.append(f"    → {lower_body.get('eval', 'N/A')}")
+        if lower_body.get('avg_knee_angle', 0):
+            evaluation_details.append(f"    (평균 무릎 각도: {lower_body.get('avg_knee_angle')}°)")
         evaluation_details.append("")
         
         evaluation_text = "\n".join(evaluation_details)
