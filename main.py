@@ -151,8 +151,8 @@ async def upload_image(file: UploadFile = File(...)):
         
         pose_data = convert_numpy_types(pose_data)
         
-        if pose_data is None:
-            error_msg = "포즈 분석 실패"
+        if pose_data is None or pose_data.get("status") == "failed":
+            error_msg = pose_data.get("error", "포즈 분석 실패") if pose_data else "포즈 분석 실패"
             print(f"ERROR: {error_msg}")
             return {"status": "failed", "error": error_msg}
         

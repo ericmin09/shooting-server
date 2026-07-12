@@ -657,8 +657,10 @@ def analyze_pose(image_path):
         # MediaPipe 포즈 모델 로드
         pose_model = get_pose_model()
 
-        # MediaPipe 포즈 감지
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2RGB))
+        # MediaPipe 포즈 감지 (Linux에서 non-contiguous 배열 문제 방지)
+        rgb_frame = cv2.cvtColor(enhanced_image, cv2.COLOR_BGR2RGB)
+        rgb_frame = np.ascontiguousarray(rgb_frame, dtype=np.uint8)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
         results = pose_model.detect(mp_image)
 
         if not results.pose_landmarks:
