@@ -24,13 +24,13 @@ def generate_chat_response(messages, system_prompt=""):
                 temperature=0.7
             )
             return response.choices[0].message.content
-        except openai.RateLimitError:
+        except openai.RateLimitError as e:
             if attempt < 2:
                 wait_seconds = (attempt + 1) * 2
                 print(f"[Chat] 429 Rate Limit - {wait_seconds}초 후 재시도 ({attempt+1}/3)")
                 time.sleep(wait_seconds)
             else:
-                raise openai.RateLimitError("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", response=None, body=None)
+                raise Exception("요청이 너무 많습니다. 잠시 후 다시 시도해주세요. (1~2분 후 재시도)")
         except Exception:
             raise
 
