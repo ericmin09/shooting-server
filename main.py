@@ -366,40 +366,44 @@ async def upload_image(file: UploadFile = File(...)):
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
-    사격에 대해 물어보는 채팅 엔드포인트 (로컬 LLM 사용, 레이트 제한 없음)
-    
-    Args:
-        request: ChatRequest 객체 (messages: 채팅 히스토리 목록)
-    
-    Returns:
-        로컬 LLM의 응답 메시지
+    사격 관련 GPT 채팅 엔드포인트
     """
     try:
         from local_llm import generate_chat_response
-        
-        system_prompt = """당신은 전문적인 사격 자세 및 안전 코치입니다. 
+
+        system_prompt = """당신은 전문적인 사격 자세 및 안전 코치입니다.
 사격에 관한 모든 질문에 대해 친절하고 자세하게 답변해주세요.
 특히 안전, 자세, 균형, 팔 각도, 어깨 위치, 머리 위치, 호흡 등에 대해 전문 지식을 갖추고 있습니다.
 한국어로 명확하고 쉽게 설명해주세요."""
-        
-        # 로컬 LLM으로 응답 생성 (레이트 제한 없음, 약 10-30초)
+
+        history = request.messages if isinstance(request.messages, list) else []
+        # 최근 10개 메시지만 전송 (토큰 절약)
+        recent_history = history[-10:]
+
         reply_text = generate_chat_response(
-            messages=request.messages if isinstance(request.messages, list) else [],
+            messages=recent_history,
             system_prompt=system_prompt
         )
-        
+
         return {
             "status": "success",
             "message": reply_text
         }
-        
+
     except Exception as e:
-        print(f"Chat error: {e}")
+        error_str = str(e)
+        print(f"Chat error: {error_str}")
         import traceback
         traceback.print_exc()
+
+        if "429" in error_str or "RateLimit" in type(e).__name__:
+            return {
+                "status": "error",
+                "message": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요. (1~2분 후 재시도)"
+            }
         return {
             "status": "error",
-            "message": f"채팅 오류: {str(e)}"
+            "message": f"채팅 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         }
 
 
