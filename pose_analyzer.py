@@ -183,6 +183,34 @@ def generate_shooting_feedback(results_dict):
     else:
         feedback.append("❌ 팔을 펴고 손목을 일직선에 맞춰주세요")
 
+    # F. 허리 각도 피드백
+    waist = scores.get("waist_angle", {})
+    waist_score = waist.get("score", 0)
+    waist_angle = waist.get("angle", 0)
+
+    if waist_score >= 9:
+        feedback.append("✓ 허리가 곧게 펴져 있습니다!")
+    elif waist_score >= 7:
+        feedback.append(f"⚠️ 허리를 조금 더 펴주세요 (현재 각도: {waist_angle}°)")
+    elif waist_score >= 5:
+        feedback.append(f"⚠️ 허리가 많이 굽어 있습니다 - 허리를 펴주세요 ({waist_angle}°)")
+    else:
+        feedback.append(f"❌ 허리가 심하게 굽었습니다 - 자세를 교정해주세요 ({waist_angle}°)")
+
+    # G. 하체 자세 피드백
+    lower = scores.get("lower_body", {})
+    lower_score = lower.get("score", 0)
+    avg_knee = lower.get("avg_knee_angle", 0)
+
+    if lower_score >= 9:
+        feedback.append("✓ 하체 자세가 안정적입니다!")
+    elif lower_score >= 7:
+        feedback.append(f"⚠️ 하체 자세를 조정해주세요 - " + lower.get("eval", ""))
+    elif lower_score >= 5:
+        feedback.append(f"⚠️ 무릎 각도를 조정해주세요 (현재: {avg_knee}°, 이상적: 150~175°)")
+    else:
+        feedback.append(f"❌ 하체 자세 개선 필요 - 무릎을 약간 구부려 안정감을 높여주세요")
+
     # 총합 피드백
     feedback.append("")  # 빈줄
     if total_score >= 90:
@@ -570,6 +598,94 @@ def calculate_linearity_score(shoulder, elbow, wrist):
         "linearity_percent": round(linearity_percent, 1)
     }
 
+def evaluate_waist_angle(shoulder_center, hip_center, knee_center):
+    """
+    F. 허리 각도 (Waist Angle) - 10점
+    어깨 중심 → 엉덩이 중심 → 무릎 중심 사이의 각도 평가
+    사격 자세에서 허리는 대체로 곧게 펴져 있어야 함
+    이상적: 150° ~ 180° (거의 일직선)
+    """
+    if shoulder_center is None or hip_center is None or knee_center is None:
+        return {"score": 5, "eval": "계산불가", "detail": "허리 각도 측정에 필요한 포인트 감지 불가", "angle": 0}
+
+    angle = calculate_angle(shoulder_center, hip_center, knee_center)
+
+    print(f"[DEBUG] 허리 각도: {angle:.1f}° (어깨: {shoulder_center}, 엉덩이: {hip_center}, 무릎: {knee_center})")
+
+    if angle >= 170:
+        score = 10
+        eval_text = "완벽하게 곧은 허리"
+    elif angle >= 160:
+        score = 9
+        eval_text = "좋은 허리 각도"
+    elif angle >= 150:
+        score = 7
+        eval_text = "허리가 약간 굽어 있습니다"
+    elif angle >= 140:
+        score = 5
+        eval_text = "허리가 많이 굽었습니다 (허리를 펴주세요)"
+    else:
+        score = 3
+        eval_text = "허리가 심하게 굽었습니다"
+
+    return {
+        "score": score,
+        "eval": eval_text,
+        "detail": f"허리 각도: {angle:.1f}°",
+        "angle": round(angle, 1)
+    }
+
+
+def evaluate_lower_body(left_hip, right_hip, left_knee, right_knee, left_ankle, right_ankle):
+    """
+    G. 하체 자세 (Lower Body) - 10점
+    무릎 각도(엉덩이-무릎-발목)로 하체 안정성 평가
+    사격 자세에서 무릎은 약간 구부려 안정적 자세 유지
+    이상적: 150° ~ 175° (약간 구부러진 상태)
+    """
+    knee_angles = []
+
+    if left_hip is not None and left_knee is not None and left_ankle is not None:
+        angle = calculate_angle(left_hip, left_knee, left_ankle)
+        knee_angles.append(angle)
+        print(f"[DEBUG] 왼쪽 무릎 각도: {angle:.1f}°")
+
+    if right_hip is not None and right_knee is not None and right_ankle is not None:
+        angle = calculate_angle(right_hip, right_knee, right_ankle)
+        knee_angles.append(angle)
+        print(f"[DEBUG] 오른쪽 무릎 각도: {angle:.1f}°")
+
+    if not knee_angles:
+        return {"score": 5, "eval": "계산불가", "detail": "하체 포인트 감지 불가", "avg_knee_angle": 0}
+
+    avg_knee_angle = sum(knee_angles) / len(knee_angles)
+
+    if 150 <= avg_knee_angle <= 175:
+        score = 10
+        eval_text = "안정적인 하체 자세 (완벽)"
+    elif (140 <= avg_knee_angle < 150) or (175 < avg_knee_angle <= 182):
+        score = 8
+        eval_text = "양호한 하체 자세"
+    elif avg_knee_angle > 182:
+        score = 7
+        eval_text = "무릎을 약간 구부려 안정감을 높여주세요"
+    elif 130 <= avg_knee_angle < 140:
+        score = 5
+        eval_text = "무릎이 많이 구부러짐 (하체를 세워주세요)"
+    else:
+        score = 3
+        eval_text = "하체 자세 개선 필요"
+
+    return {
+        "score": score,
+        "eval": eval_text,
+        "detail": f"평균 무릎 각도: {avg_knee_angle:.1f}°",
+        "avg_knee_angle": round(avg_knee_angle, 1),
+        "left_knee_angle": round(knee_angles[0], 1) if len(knee_angles) >= 1 else None,
+        "right_knee_angle": round(knee_angles[1], 1) if len(knee_angles) >= 2 else None
+    }
+
+
 def detect_body_orientation(keypoints, visibility_scores):
     """
     사람의 몸 방향 감지 (정면, 좌측, 우측)
@@ -709,6 +825,10 @@ def analyze_pose(image_path):
         right_wrist = get_point(16)
         left_hip = get_point(23)
         right_hip = get_point(24)
+        left_knee = get_point(25)
+        right_knee = get_point(26)
+        left_ankle = get_point(27)
+        right_ankle = get_point(28)
 
         print(f"\n[주요 포인트 감지]")
         print(f"✓ 코: {nose is not None}")
@@ -716,6 +836,8 @@ def analyze_pose(image_path):
         print(f"✓ 팔꿈치: {left_elbow is not None}, {right_elbow is not None}")
         print(f"✓ 손목: {left_wrist is not None}, {right_wrist is not None}")
         print(f"✓ 엉덩이: {left_hip is not None}, {right_hip is not None}")
+        print(f"✓ 무릎: {left_knee is not None}, {right_knee is not None}")
+        print(f"✓ 발목: {left_ankle is not None}, {right_ankle is not None}")
 
         # 결과 딕셔너리
         results_dict = {
@@ -814,18 +936,50 @@ def analyze_pose(image_path):
         results_dict["scores"]["arm_wrist_alignment"] = arm_wrist_result
         print(f"점수: {arm_wrist_result['score']}/25")
 
+        # ============ F. 허리 각도 (Waist Angle) - 10점 ============
+        print(f"\n[F. 허리 각도 분석]")
+        knee_center = None
+        if left_knee is not None and right_knee is not None:
+            knee_center = ((left_knee[0] + right_knee[0]) / 2,
+                           (left_knee[1] + right_knee[1]) / 2)
+        elif left_knee is not None:
+            knee_center = left_knee
+        elif right_knee is not None:
+            knee_center = right_knee
+
+        waist_angle_result = evaluate_waist_angle(shoulder_center, hip_center, knee_center)
+        results_dict["scores"]["waist_angle"] = waist_angle_result
+        print(f"평가: {waist_angle_result['eval']}")
+        print(f"상세: {waist_angle_result['detail']}")
+        print(f"점수: {waist_angle_result['score']}/10")
+
+        # ============ G. 하체 자세 (Lower Body) - 10점 ============
+        print(f"\n[G. 하체 자세 분석]")
+        lower_body_result = evaluate_lower_body(
+            left_hip, right_hip, left_knee, right_knee, left_ankle, right_ankle
+        )
+        results_dict["scores"]["lower_body"] = lower_body_result
+        print(f"평가: {lower_body_result['eval']}")
+        print(f"상세: {lower_body_result['detail']}")
+        print(f"점수: {lower_body_result['score']}/10")
+
         # ============ 종합 평가 ============
         print(f"\n{'='*60}")
         print(f"[종합 평가]")
         print(f"{'='*60}")
-        
-        total_score = (
+
+        # 원시 합계 (최대 120점: 기존 100 + 새 항목 20)
+        raw_total = (
             body_lean_result["score"] +
             arm_extension_result["score"] +
             shoulder_level_result["score"] +
             head_position_result["score"] +
-            arm_wrist_result["score"]
+            arm_wrist_result["score"] +
+            waist_angle_result["score"] +
+            lower_body_result["score"]
         )
+        # 100점 만점으로 정규화
+        total_score = int(raw_total * 100 / 120)
 
         # 등급 결정
         if total_score >= 90:
@@ -847,8 +1001,9 @@ def analyze_pose(image_path):
         results_dict["overall_score"] = total_score
         results_dict["posture_grade"] = grade
         results_dict["grade_text"] = grade_text
-        
-        print(f"총점: {total_score}/100")
+
+        print(f"원시 합계: {raw_total}/120")
+        print(f"총점(정규화): {total_score}/100")
         print(f"등급: {grade} ({grade_text})")
 
         # ============ 피드백 생성 ============
