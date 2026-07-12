@@ -1,12 +1,12 @@
 """
-OpenAI API 채팅 응답 생성 - 재시도 로직 포함
+Groq API 채팅 응답 생성 (무료 고속 LLM)
 """
 import os
-import time
-import openai
+from groq import Groq
 
 def generate_chat_response(messages, system_prompt=""):
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
     chat_messages = []
     if system_prompt:
         chat_messages.append({"role": "system", "content": system_prompt})
@@ -14,31 +14,19 @@ def generate_chat_response(messages, system_prompt=""):
         if isinstance(msg, dict) and "role" in msg and "content" in msg:
             chat_messages.append({"role": msg["role"], "content": msg["content"]})
 
-    # 429 Rate Limit 시 최대 3번 재시도 (2초, 4초 대기)
-    for attempt in range(3):
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=chat_messages,
-                max_tokens=600,
-                temperature=0.7
-            )
-            return response.choices[0].message.content
-        except openai.RateLimitError as e:
-            if attempt < 2:
-                wait_seconds = (attempt + 1) * 2
-                print(f"[Chat] 429 Rate Limit - {wait_seconds}초 후 재시도 ({attempt+1}/3)")
-                time.sleep(wait_seconds)
-            else:
-                raise Exception("요청이 너무 많습니다. 잠시 후 다시 시도해주세요. (1~2분 후 재시도)")
-        except Exception:
-            raise
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=chat_messages,
+        max_tokens=600,
+        temperature=0.7
+    )
+    return response.choices[0].message.content
 
 def generate_pose_feedback(pose_summary):
     try:
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "당신은 사격 자세 전문 코치입니다."},
                 {"role": "user", "content": f"다음 자세 데이터를 분석해주세요:\n{pose_summary}"}

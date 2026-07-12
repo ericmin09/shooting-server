@@ -6,5 +6,6 @@ python-multipart
 pillow
 mediapipe
 openai
+groq
 python-dotenv
 cloudinary
