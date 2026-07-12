@@ -4,6 +4,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     libgl1 \
+    libgles2 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
@@ -19,7 +20,7 @@ COPY . .
 
 RUN mkdir -p uploads
 
-# MediaPipe 포즈 모델 미리 다운로드 (런타임에 다운로드 불필요)
+# MediaPipe 포즈 모델 미리 다운로드
 RUN wget -q -O pose_landmarker.task \
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
 
