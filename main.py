@@ -272,7 +272,8 @@ async def upload_image(file: UploadFile = File(...)):
         
         feedback_text = "\n".join([f"{item}" for item in simplified_feedback]) if simplified_feedback else "피드백이 없습니다."
         
-        # 시각화 이미지 URL (Cloudinary로 업로드)
+        # 시각화 이미지 - Base64로 인코딩해서 JSON에 직접 포함 (URL 방식 불안정 문제 해결)
+        visualization_data = None
         visualization_url = None
         if "visualization_image" in pose_data and pose_data["visualization_image"]:
             vis_filename = pose_data['visualization_image']
@@ -280,7 +281,14 @@ async def upload_image(file: UploadFile = File(...)):
             
             if os.path.exists(vis_path):
                 try:
-                    # Cloudinary에 업로드
+                    import base64
+                    with open(vis_path, 'rb') as f:
+                        visualization_data = base64.b64encode(f.read()).decode('utf-8')
+                    print(f"✓ 시각화 이미지 Base64 인코딩 완료 ({len(visualization_data)} chars)")
+                except Exception as e:
+                    print(f"⚠ 시각화 이미지 Base64 인코딩 실패: {e}")
+                # Cloudinary 업로드도 시도 (URL 폴백용)
+                try:
                     upload_result = cloudinary.uploader.upload(
                         vis_path,
                         folder="shootinganal/landmarks",
@@ -291,8 +299,6 @@ async def upload_image(file: UploadFile = File(...)):
                     print(f"✓ 시각화 이미지 Cloudinary 업로드 완료: {visualization_url}")
                 except Exception as e:
                     print(f"⚠ Cloudinary 업로드 실패: {e}")
-                    # Cloudinary 실패 시 서버 로컬 URL로 폴백
-                    visualization_url = f"/images/{vis_filename}"
             else:
                 print(f"⚠ 시각화 이미지 파일 없음: {vis_path}")
         else:
@@ -311,7 +317,8 @@ async def upload_image(file: UploadFile = File(...)):
             "evaluation_details": evaluation_text,
             "feedback": feedback_text,
             
-            # 관절포인트가 그려진 이미지만
+            # 관절포인트가 그려진 이미지 (Base64 + URL)
+            "visualization_data": visualization_data,
             "visualization_url": visualization_url,
             
             # 원본 데이터 (필요시 참고)
