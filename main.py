@@ -63,6 +63,17 @@ except Exception as e:
 def root():
     return {"message": "server is running"}
 
+@app.get("/debug-env")
+def debug_env():
+    """환경변수 상태 확인 (값은 숨기고 존재 여부만)"""
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    openai_key = os.getenv("OPENAI_API_KEY", "")
+    return {
+        "GROQ_API_KEY": f"SET ({groq_key[:8]}...)" if groq_key else "NOT SET",
+        "OPENAI_API_KEY": f"SET ({openai_key[:8]}...)" if openai_key else "NOT SET",
+        "env_count": len(os.environ)
+    }
+
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     try:
