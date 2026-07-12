@@ -5,7 +5,11 @@ import os
 from groq import Groq
 
 def generate_chat_response(messages, system_prompt=""):
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    api_key = os.getenv("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise Exception("GROQ_API_KEY가 설정되지 않았습니다. Railway Variables를 확인해주세요.")
+
+    client = Groq(api_key=api_key)
 
     chat_messages = []
     if system_prompt:
